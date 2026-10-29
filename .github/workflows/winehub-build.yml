@@ -1,23 +1,19 @@
-name: WINE-HUB Android APK
+name: WINE-HUB Debug APK (ARM64)
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-      - master
 
 permissions:
   contents: read
 
 jobs:
   build:
-    name: Build WINE-HUB ARM64 APK
+    name: Build WINE-HUB debug APK
     runs-on: ubuntu-22.04
     timeout-minutes: 90
 
     steps:
-      - name: Checkout source and submodules
+      - name: Checkout GASS-OS source and dependencies
         uses: actions/checkout@v4
         with:
           submodules: recursive
@@ -42,143 +38,24 @@ jobs:
             "ndk;24.0.8215888" \
             "cmake;3.22.1"
 
-      - name: Apply WINE-HUB app identity
-        shell: bash
+      - name: Verify WINE-HUB app identity
         run: |
-          set -euo pipefail
-
-          sed -i "s/applicationId 'com.winlator'/applicationId 'com.gass.winehub'/" \
-            app/app/build.gradle
-
-          # Restrict native builds to ARM64; libadrenotools does not support 32-bit ARM.
-          python3 - <<'PYTHON'
-          from pathlib import Path
-          import re
-
-          p = Path("app/app/build.gradle")
-          s = p.read_text()
-
-          release_has_arm64 = re.search(
-              r"(?ms)^[ ]{8}release\s*\{.*?^[ ]{12}abiFilters\s+['\"]arm64-v8a['\"]",
-              s,
-          )
-
-          if release_has_arm64:
-              print("Release ABI filter already configured.")
-          else:
-              pattern = r"(?ms)^(    buildTypes \{\n.*?)(^    \})"
-              match = re.search(pattern, s)
-              if not match:
-                  raise SystemExit("Could not safely locate buildTypes block.")
-
-              release = (
-                  "        release {\n"
-                  "            ndk {\n"
-                  "                abiFilters 'arm64-v8a'\n"
-                  "            }\n"
-                  "        }\n"
-              )
-              s = s[:match.start(2)] + release + s[match.start(2):]
-              p.write_text(s)
-              print("Configured release build for ARM64.")
-          PYTHON
-
-          sed -i 's/com\.winlator\.FileProvider/com.gass.winehub.FileProvider/g' \
-            app/app/src/main/AndroidManifest.xml \
-            app/app/src/main/java/com/winlator/core/FileUtils.java
-
-          for f in \
-            app/app/src/main/res/values/strings.xml \
-            app/app/src/main/res/values-pt/strings.xml \
-            app/app/src/main/res/values-ru/strings.xml
-          do
-            sed -i 's/<string name="app_name">Winlator<\/string>/<string name="app_name">WINE-HUB<\/string>/' "$f"
-          done
-
           grep -q "applicationId 'com.gass.winehub'" app/app/build.gradle
           grep -q 'com.gass.winehub.FileProvider' \
             app/app/src/main/AndroidManifest.xml
-          grep -q '<string name="app_name">WINE-HUB</string>' \
-            app/app/src/main/res/values/strings.xml
+          echo "WINE-HUB application identity verified."
 
-      - name: Prepare release signing key
-        shell: bash
-        env:
-          WINEHUB_KEYSTORE_BASE64: ${{ secrets.WINEHUB_KEYSTORE_BASE64 }}
-          WINEHUB_STORE_PASSWORD: ${{ secrets.WINEHUB_STORE_PASSWORD }}
-          WINEHUB_KEY_ALIAS: ${{ secrets.WINEHUB_KEY_ALIAS }}
-        run: |
-          set -euo pipefail
-          : "${WINEHUB_KEYSTORE_BASE64:?Missing keystore secret}"
-          : "${WINEHUB_STORE_PASSWORD:?Missing keystore password secret}"
-          : "${WINEHUB_KEY_ALIAS:?Missing alias secret}"
-
-          KS="$RUNNER_TEMP/winehub-release.jks"
-          printf '%s' "$WINEHUB_KEYSTORE_BASE64" | base64 --decode > "$KS"
-          chmod 600 "$KS"
-
-          keytool -list \
-            -keystore "$KS" \
-            -storepass "$WINEHUB_STORE_PASSWORD" \
-            -alias "$WINEHUB_KEY_ALIAS" >/dev/null
-
-          echo "WINEHUB_KEYSTORE_PATH=$KS" >> "$GITHUB_ENV"
-
-      - name: Build debug and release APKs
+      - name: Build debug APK only
         working-directory: app
         run: >-
           bash ./gradlew --no-daemon
           '-Dorg.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=768m -Dfile.encoding=UTF-8'
           :app:assembleDebug
-          :app:assembleRelease
 
-      - name: Align and sign release APK
-        shell: bash
-        env:
-          WINEHUB_STORE_PASSWORD: ${{ secrets.WINEHUB_STORE_PASSWORD }}
-          WINEHUB_KEY_PASSWORD: ${{ secrets.WINEHUB_KEY_PASSWORD }}
-          WINEHUB_KEY_ALIAS: ${{ secrets.WINEHUB_KEY_ALIAS }}
-        run: |
-          set -euo pipefail
-          : "${WINEHUB_KEY_PASSWORD:?Missing private key password secret}"
-
-          INPUT_APK="$(find app/app/build/outputs/apk/release \
-            -maxdepth 1 -type f -name '*.apk' -print -quit)"
-
-          if [ -z "$INPUT_APK" ]; then
-            echo "ERROR: Release APK not found"
-            exit 1
-          fi
-
-          BT="$ANDROID_HOME/build-tools/35.0.0"
-          ALIGNED="$RUNNER_TEMP/WINE-HUB-release-aligned.apk"
-          SIGNED="$RUNNER_TEMP/WINE-HUB-release.apk"
-
-          "$BT/zipalign" -f -p 4 "$INPUT_APK" "$ALIGNED"
-
-          "$BT/apksigner" sign \
-            --ks "$WINEHUB_KEYSTORE_PATH" \
-            --ks-key-alias "$WINEHUB_KEY_ALIAS" \
-            --ks-pass env:WINEHUB_STORE_PASSWORD \
-            --key-pass env:WINEHUB_KEY_PASSWORD \
-            --out "$SIGNED" \
-            "$ALIGNED"
-
-          "$BT/apksigner" verify --verbose "$SIGNED"
-          echo "Signed release APK verified."
-
-      - name: Upload WINE-HUB debug APK
+      - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
           name: WINE-HUB-debug-ARM64
           path: app/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
-
-      - name: Upload signed WINE-HUB release APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: WINE-HUB-release-signed-ARM64
-          path: ${{ runner.temp }}/WINE-HUB-release.apk
-          if-no-files-found: error
-          retention-days: 30
