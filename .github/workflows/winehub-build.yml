@@ -68,14 +68,80 @@ jobs:
           grep -q '<string name="app_name">WINE-HUB</string>' \
             app/app/src/main/res/values/strings.xml
 
-      - name: Build debug APK
-        working-directory: app
-        run: bash ./gradlew --no-daemon :app:assembleDebug
+      - name: Prepare release signing key
+        shell: bash
+        env:
+          WINEHUB_KEYSTORE_BASE64: ${{ secrets.WINEHUB_KEYSTORE_BASE64 }}
+          WINEHUB_STORE_PASSWORD: ${{ secrets.WINEHUB_STORE_PASSWORD }}
+          WINEHUB_KEY_ALIAS: ${{ secrets.WINEHUB_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          : "${WINEHUB_KEYSTORE_BASE64:?Missing keystore secret}"
+          : "${WINEHUB_STORE_PASSWORD:?Missing keystore password secret}"
+          : "${WINEHUB_KEY_ALIAS:?Missing alias secret}"
 
-      - name: Upload WINE-HUB APK
+          KS="$RUNNER_TEMP/winehub-release.jks"
+          printf '%s' "$WINEHUB_KEYSTORE_BASE64" | base64 --decode > "$KS"
+          chmod 600 "$KS"
+
+          keytool -list \
+            -keystore "$KS" \
+            -storepass "$WINEHUB_STORE_PASSWORD" \
+            -alias "$WINEHUB_KEY_ALIAS" >/dev/null
+
+          echo "WINEHUB_KEYSTORE_PATH=$KS" >> "$GITHUB_ENV"
+
+      - name: Build debug and release APKs
+        working-directory: app
+        run: bash ./gradlew --no-daemon :app:assembleDebug :app:assembleRelease
+
+      - name: Align and sign release APK
+        shell: bash
+        env:
+          WINEHUB_STORE_PASSWORD: ${{ secrets.WINEHUB_STORE_PASSWORD }}
+          WINEHUB_KEY_PASSWORD: ${{ secrets.WINEHUB_KEY_PASSWORD }}
+          WINEHUB_KEY_ALIAS: ${{ secrets.WINEHUB_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          : "${WINEHUB_KEY_PASSWORD:?Missing private key password secret}"
+
+          INPUT_APK="$(find app/app/build/outputs/apk/release \
+            -maxdepth 1 -type f -name '*.apk' -print -quit)"
+
+          if [ -z "$INPUT_APK" ]; then
+            echo "ERROR: Release APK not found"
+            exit 1
+          fi
+
+          BT="$ANDROID_HOME/build-tools/35.0.0"
+          ALIGNED="$RUNNER_TEMP/WINE-HUB-release-aligned.apk"
+          SIGNED="$RUNNER_TEMP/WINE-HUB-release.apk"
+
+          "$BT/zipalign" -f -p 4 "$INPUT_APK" "$ALIGNED"
+
+          "$BT/apksigner" sign \
+            --ks "$WINEHUB_KEYSTORE_PATH" \
+            --ks-key-alias "$WINEHUB_KEY_ALIAS" \
+            --ks-pass env:WINEHUB_STORE_PASSWORD \
+            --key-pass env:WINEHUB_KEY_PASSWORD \
+            --out "$SIGNED" \
+            "$ALIGNED"
+
+          "$BT/apksigner" verify --verbose "$SIGNED"
+          echo "Signed release APK verified."
+
+      - name: Upload WINE-HUB debug APK
         uses: actions/upload-artifact@v4
         with:
           name: WINE-HUB-debug-ARM64
           path: app/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
+
+      - name: Upload signed WINE-HUB release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: WINE-HUB-release-signed-ARM64
+          path: ${{ runner.temp }}/WINE-HUB-release.apk
+          if-no-files-found: error
+          retention-days: 30
