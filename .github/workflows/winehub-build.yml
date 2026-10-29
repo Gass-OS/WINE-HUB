@@ -1,0 +1,79 @@
+name: WINE-HUB Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build WINE-HUB ARM64 APK
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout source and submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android build dependencies
+        run: |
+          yes | sdkmanager --licenses
+          sdkmanager --install \
+            "platforms;android-35" \
+            "build-tools;35.0.0" \
+            "ndk;24.0.8215888" \
+            "cmake;3.22.1"
+
+      - name: Apply WINE-HUB app identity
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          sed -i "s/applicationId 'com.winlator'/applicationId 'com.gass.winehub'/" \
+            app/app/build.gradle
+
+          sed -i 's/com\.winlator\.FileProvider/com.gass.winehub.FileProvider/g' \
+            app/app/src/main/AndroidManifest.xml \
+            app/app/src/main/java/com/winlator/core/FileUtils.java
+
+          for f in \
+            app/app/src/main/res/values/strings.xml \
+            app/app/src/main/res/values-pt/strings.xml \
+            app/app/src/main/res/values-ru/strings.xml
+          do
+            sed -i 's/<string name="app_name">Winlator<\/string>/<string name="app_name">WINE-HUB<\/string>/' "$f"
+          done
+
+          grep -q "applicationId 'com.gass.winehub'" app/app/build.gradle
+          grep -q 'com.gass.winehub.FileProvider' \
+            app/app/src/main/AndroidManifest.xml
+          grep -q '<string name="app_name">WINE-HUB</string>' \
+            app/app/src/main/res/values/strings.xml
+
+      - name: Build debug APK
+        working-directory: app
+        run: bash ./gradlew --no-daemon :app:assembleDebug
+
+      - name: Upload WINE-HUB APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: WINE-HUB-debug-ARM64
+          path: app/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
