@@ -1,57 +1,97 @@
-<p align="center">
-	<img src="logo.png" width="376" height="128" alt="Winlator Logo" />
-</p>
+<div align="center">
 
-<p align="center">
-	<a href="https://winlator.org/">
-		<img src="https://img.shields.io/badge/winlator-website-42a5f5?style=flat-square" />
-	</a>
-	<a href="https://github.com/brunodev85/winlator/releases">
-		<img src="https://img.shields.io/github/downloads/brunodev85/winlator/v11.2.0/total.svg?style=flat-square&label=downloads@v11.2" />
-	</a>
-	<a href="https://github.com/brunodev85/winlator/stargazers">
-		<img src="https://img.shields.io/github/stars/brunodev85/winlator?style=flat-square&logo=github&color=ffb300" />
-	</a>
-</p>
+# 🥃 WINE-HUB
 
-# Winlator
+### Windows apps and games on Android
 
-Winlator is an Android application that lets you to run Windows (x86_64) applications with Wine and Box86/Box64.
+**An experimental Gass-OS project exploring Windows compatibility on Android ARM64.**
 
-# Installation
+[![Build APK](https://github.com/Gass-OS/WINE-HUB/actions/workflows/winehub-build.yml/badge.svg?branch=main)](https://github.com/Gass-OS/WINE-HUB/actions/workflows/winehub-build.yml)
+[![Android ARM64](https://img.shields.io/badge/Platform-Android%20ARM64-3DDC84?style=flat-square&logo=android&logoColor=white)](https://github.com/Gass-OS/WINE-HUB)
+[![Experimental](https://img.shields.io/badge/Status-Experimental-orange?style=flat-square)](https://github.com/Gass-OS/WINE-HUB)
+[![Gass-OS](https://img.shields.io/badge/Project-Gass--OS-182848?style=flat-square&logo=github)](https://github.com/Gass-OS)
 
-1. Download and install the APK (Winlator_11.2.apk) from [GitHub Releases](https://github.com/brunodev85/winlator/releases)
-2. Launch the app and wait for the installation process to finish
+</div>
 
-----
+---
 
-[![Play on Youtube](https://img.youtube.com/vi/ETYDgKz4jBQ/3.jpg)](https://www.youtube.com/watch?v=ETYDgKz4jBQ)
-[![Play on Youtube](https://img.youtube.com/vi/9E4wnKf2OsI/2.jpg)](https://www.youtube.com/watch?v=9E4wnKf2OsI)
-[![Play on Youtube](https://img.youtube.com/vi/czEn4uT3Ja8/2.jpg)](https://www.youtube.com/watch?v=czEn4uT3Ja8)
-[![Play on Youtube](https://img.youtube.com/vi/eD36nxfT_Z0/2.jpg)](https://www.youtube.com/watch?v=eD36nxfT_Z0)
-[![Play on Youtube](https://img.youtube.com/vi/GHBKmzGmhoo/1.jpg)](https://www.youtube.com/watch?v=GHBKmzGmhoo)
+## ✨ About WINE-HUB
 
-----
+**WINE-HUB** is an experimental Android application project maintained by [Gass-OS](https://github.com/Gass-OS).
 
-# Useful Tips
+The project is based on [Winlator by Bruno](https://github.com/brunodev85/winlator), with a separate application identity and a dedicated build workflow.
 
-- If you are experiencing instability issues, try changing the Box64 preset in Container Settings -> Advanced Tab.
-- For applications that use .NET Framework, try installing `Wine Mono` found in Start Menu -> System Tools -> Installers.
-- If some older games don't open, try adding the environment variable `MESA_EXTENSION_MAX_YEAR=2003` in Container Settings -> Environment Variables.
-- Try running the games using the shortcut on the Winlator home screen, there you can define individual settings for each game.
-- To display low resolution games correctly, try to enabling the `Force Fullscreen` option in the shortcut settings.
-- To improve stability in games that uses Unity Engine, try changing the Box64 preset to `Stability` or in the shortcut settings add the exec argument `-force-gfx-direct`.
-- If you are experiencing audio crackling, try increasing the average latency in ALSA/PulseAudio configuration. Old games like Unreal Gold resolve audio issues by increasing this value to 90ms.
+Our goal is to explore running Windows applications and games on Android ARM64 using technologies such as Wine, Box64 and graphics translation layers.
 
-# Credits and Third-party apps
+> **Transparency:** WINE-HUB is currently a downstream customization of Winlator. It is not a new Wine implementation or a replacement compatibility engine. Credit remains with the original developers and all third-party projects.
 
-- GLIBC Patches by [Termux Pacman](https://github.com/termux-pacman/glibc-packages)
-- Wine ([winehq.org](https://www.winehq.org/))
-- Box86/Box64 by [ptitseb](https://github.com/ptitSeb)
-- Mesa (Turnip/Zink/VirGL) ([mesa3d.org](https://www.mesa3d.org))
-- DXVK ([github.com/doitsujin/dxvk](https://github.com/doitsujin/dxvk))
-- VKD3D ([gitlab.winehq.org/wine/vkd3d](https://gitlab.winehq.org/wine/vkd3d))
-- CNC DDraw ([github.com/FunkyFr3sh/cnc-ddraw](https://github.com/FunkyFr3sh/cnc-ddraw))
+## 🚧 Project status
 
-Special thanks to all the developers involved in these projects.<br>
-Thank you to all the people who believe in this project.
+- [x] Create the public Gass-OS repository
+- [x] Add a dedicated Android APK build workflow
+- [x] Configure the WINE-HUB application identity in CI
+- [ ] Verify the first successful APK build
+- [ ] Install and test on physical Android hardware
+- [ ] Document tested devices and application compatibility
+- [ ] Publish a tested release
+
+Compatibility, stability and GPU acceleration must be tested before they can be claimed as working.
+
+## 📦 Download and test
+
+**Experimental builds:**  
+[Open WINE-HUB GitHub Actions](https://github.com/Gass-OS/WINE-HUB/actions/workflows/winehub-build.yml)
+
+1. Open a successful workflow run.
+2. Download the `WINE-HUB-debug-ARM64` artifact.
+3. Extract the downloaded ZIP archive.
+4. Install the APK on a compatible Android device.
+
+Debug artifacts are intended for testing and may expire. Check the [Releases page](https://github.com/Gass-OS/WINE-HUB/releases) for published releases. No stable release is promised yet.
+
+## 🛠️ Build system
+
+The GitHub Actions workflow checks out the source and submodules, applies the WINE-HUB application ID and app name, and builds an Android debug APK for `arm64-v8a`.
+
+A successful compilation does not automatically mean every Windows application works or that hardware acceleration is enabled.
+
+## 🧩 Technologies and credits
+
+WINE-HUB builds on the work of many open-source developers and projects:
+
+- [Winlator](https://github.com/brunodev85/winlator) — upstream Android application
+- [Wine](https://www.winehq.org/) — Windows compatibility layer
+- [Box64](https://github.com/ptitSeb/box64) — x86-64 application translation
+- [Mesa](https://www.mesa3d.org/) — graphics drivers and translation technologies
+- [DXVK](https://github.com/doitsujin/dxvk) — Direct3D 9/10/11 over Vulkan
+- [VKD3D](https://gitlab.winehq.org/wine/vkd3d) — Direct3D 12 translation
+- Other bundled components and submodules, credited in their respective upstream projects.
+
+Please consult each project for its complete credits and license terms.
+
+## 🐛 Bug reports
+
+When reporting an issue, include:
+
+- Android device model and Android version
+- WINE-HUB build or workflow run
+- Application or game being tested
+- Steps to reproduce the issue
+- Relevant logs or screenshots
+
+## 📜 Licensing and attribution
+
+WINE-HUB incorporates Winlator and other third-party software. Original copyright notices, license files and required attributions must be preserved. Individual components may have different redistribution requirements.
+
+Review the relevant licenses before distributing modified source or APKs.
+
+---
+
+<div align="center">
+
+**WINE-HUB**  
+An experimental project by [Gass-OS](https://github.com/Gass-OS)
+
+*Built on open-source work. Respecting the people behind it.*
+
+</div>
