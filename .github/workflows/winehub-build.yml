@@ -50,6 +50,39 @@ jobs:
           sed -i "s/applicationId 'com.winlator'/applicationId 'com.gass.winehub'/" \
             app/app/build.gradle
 
+          # Restrict native builds to ARM64; libadrenotools does not support 32-bit ARM.
+          python3 - <<'PYTHON'
+          from pathlib import Path
+          import re
+
+          p = Path("app/app/build.gradle")
+          s = p.read_text()
+
+          release_has_arm64 = re.search(
+              r"(?ms)^[ ]{8}release\s*\{.*?^[ ]{12}abiFilters\s+['\"]arm64-v8a['\"]",
+              s,
+          )
+
+          if release_has_arm64:
+              print("Release ABI filter already configured.")
+          else:
+              pattern = r"(?ms)^(    buildTypes \{\n.*?)(^    \})"
+              match = re.search(pattern, s)
+              if not match:
+                  raise SystemExit("Could not safely locate buildTypes block.")
+
+              release = (
+                  "        release {\n"
+                  "            ndk {\n"
+                  "                abiFilters 'arm64-v8a'\n"
+                  "            }\n"
+                  "        }\n"
+              )
+              s = s[:match.start(2)] + release + s[match.start(2):]
+              p.write_text(s)
+              print("Configured release build for ARM64.")
+          PYTHON
+
           sed -i 's/com\.winlator\.FileProvider/com.gass.winehub.FileProvider/g' \
             app/app/src/main/AndroidManifest.xml \
             app/app/src/main/java/com/winlator/core/FileUtils.java
