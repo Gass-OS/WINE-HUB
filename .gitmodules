@@ -1,7 +1,7 @@
 [submodule "app"]
 	path = app
-	url = https://github.com/brunodev85/winlator-app
-	branch = main
+	url = https://github.com/Gass-OS/winlator-app.git
+	branch = winehub/fix-container-create-hang-20261029
 [submodule "vortek"]
 	path = vortek
 	url = https://github.com/brunodev85/vortek
