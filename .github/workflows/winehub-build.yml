@@ -126,7 +126,11 @@ jobs:
 
       - name: Build debug and release APKs
         working-directory: app
-        run: bash ./gradlew --no-daemon :app:assembleDebug :app:assembleRelease
+        run: >-
+          bash ./gradlew --no-daemon
+          '-Dorg.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=768m -Dfile.encoding=UTF-8'
+          :app:assembleDebug
+          :app:assembleRelease
 
       - name: Align and sign release APK
         shell: bash
