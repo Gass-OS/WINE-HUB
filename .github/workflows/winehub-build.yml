@@ -47,7 +47,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          sed -i "s/applicationId 'com.winlator'/applicationId 'com.gass.hub'/" \
+          sed -i -E "s/applicationId '[^']*'/applicationId 'com.gass.hub'/" \
             app/app/build.gradle
 
           # Restrict native builds to ARM64; libadrenotools does not support 32-bit ARM.
@@ -83,9 +83,10 @@ jobs:
               print("Configured release build for ARM64.")
           PYTHON
 
-          sed -i 's/com\.winlator\.FileProvider/com.gass.hub.FileProvider/g' \
-            app/app/src/main/AndroidManifest.xml \
-            app/app/src/main/java/com/winlator/core/FileUtils.java
+          for f in app/app/src/main/AndroidManifest.xml app/app/src/main/java/com/winlator/core/FileUtils.java; do
+            sed -i -e 's/com\.winlator\.FileProvider/com.gass.hub.FileProvider/g' -e 's/com\.gass\.winehub\.FileProvider/com.gass.hub.FileProvider/g' "$f"
+          done
+          grep -rIl 'com\.gass\.winehub' app/app/src/main | xargs -r sed -i 's/com\.gass\.winehub/com.gass.hub/g'
 
           for f in \
             app/app/src/main/res/values/strings.xml \
