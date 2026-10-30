@@ -47,7 +47,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          sed -i "s/applicationId 'com.winlator'/applicationId 'com.gass.winehub'/" \
+          sed -i "s/applicationId 'com.winlator'/applicationId 'com.gass.hub'/" \
             app/app/build.gradle
 
           # Restrict native builds to ARM64; libadrenotools does not support 32-bit ARM.
@@ -83,7 +83,7 @@ jobs:
               print("Configured release build for ARM64.")
           PYTHON
 
-          sed -i 's/com\.winlator\.FileProvider/com.gass.winehub.FileProvider/g' \
+          sed -i 's/com\.winlator\.FileProvider/com.gass.hub.FileProvider/g' \
             app/app/src/main/AndroidManifest.xml \
             app/app/src/main/java/com/winlator/core/FileUtils.java
 
@@ -95,11 +95,21 @@ jobs:
             sed -i 's/<string name="app_name">Winlator<\/string>/<string name="app_name">WINE-HUB<\/string>/' "$f"
           done
 
-          grep -q "applicationId 'com.gass.winehub'" app/app/build.gradle
-          grep -q 'com.gass.winehub.FileProvider' \
+          grep -q "applicationId 'com.gass.hub'" app/app/build.gradle
+          grep -q 'com.gass.hub.FileProvider' \
             app/app/src/main/AndroidManifest.xml
           grep -q '<string name="app_name">WINE-HUB</string>' \
             app/app/src/main/res/values/strings.xml
+
+      - name: Patch baked app path (rootfs, drivers, native sources)
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v zstd >/dev/null || sudo apt-get install -y zstd
+          for f in $(grep -rIl -e '/data/data/com.winlator' -e '/data/data/com.gass.winehub' app/app/src/main/cpp app/app/src/main/java || true); do
+            sed -i -e 's#/data/data/com\.winlator#/data/data/com.gass.hub#g' -e 's#/data/data/com\.gass\.winehub#/data/data/com.gass.hub#g' "$f"
+          done
+          python3 tools/patch_package_path.py app/app/src/main/assets
 
       - name: Prepare release signing key
         shell: bash
